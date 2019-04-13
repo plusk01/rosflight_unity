@@ -14,7 +14,6 @@ endif()
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
     roscpp
-    sensor_msgs
     rosflight_firmware
 )
 
@@ -138,7 +137,7 @@ ${catkin_INCLUDE_DIRS}
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(rosflight_unity_node src/rosflight_unity_node.cpp src/unity_board.cpp)
+add_executable(rosflight_unity_node src/rosflight_unity_node.cpp src/unity_board.cpp src/unity_bridge.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

@@ -10,9 +10,12 @@
 namespace rosflight_unity
 {
 
-UnityBoard::UnityBoard()
-: rosflight_firmware::UDPBoard()
+UnityBoard::UnityBoard(UnityBridge& unity)
+: rosflight_firmware::UDPBoard(),
+  unity_(unity)
 {}
+
+// ----------------------------------------------------------------------------
 
 void UnityBoard::setVehicleName(std::string name)
 {
@@ -46,7 +49,7 @@ uint64_t UnityBoard::clock_micros()
 
 bool UnityBoard::new_imu_data()
 {
-
+  return unity_.hasNewImuData();
 }
 
 // ----------------------------------------------------------------------------

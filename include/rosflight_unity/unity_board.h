@@ -14,13 +14,15 @@
 
 #include <rosflight_firmware/udp_board.h>
 
+#include "rosflight_unity/unity_bridge.h"
+
 namespace rosflight_unity
 {
 
   class UnityBoard : public rosflight_firmware::UDPBoard
   {
   public:
-    UnityBoard();
+    UnityBoard(UnityBridge& unity);
     ~UnityBoard() = default;
     
     /**
@@ -86,6 +88,8 @@ namespace rosflight_unity
 
   private:
     std::string vehicleName_ = "default"; ///< name of associated simulated vehicle
+
+    UnityBridge& unity_; ///< ref to an instantiated unity bridge
 
   };
 
