@@ -20,6 +20,9 @@ UnityBridge::UnityBridge()
 
 UnityBridge::~UnityBridge()
 {
+  MutexLock read_lock(read_mutex_);
+  MutexLock write_lock(write_mutex_);
+
   io_service_.stop();
   socket_.close();
 
@@ -32,6 +35,26 @@ UnityBridge::~UnityBridge()
 void UnityBridge::onPhysicsUpdate(std::function<void(int32_t,int32_t)> fn)
 {
   cbPhysics_ = fn;
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::getNewImuData(float accel[3], float gyro[3])
+{
+  MutexLock lock(read_mutex_);
+
+  // Unity (left-handed) to FRD (right-handed)
+  accel[0] =  accel_[0];
+  accel[1] = -accel_[2];
+  accel[2] = -accel_[1];
+
+  // Unity (left-handed) to FRD (right-handed)
+  gyro[0] = -gyro_[0];
+  gyro[1] =  gyro_[2];
+  gyro[2] =  gyro_[1];
+
+  // reset new data flag
+  newImuData_ = false;
 }
 
 // ----------------------------------------------------------------------------
@@ -57,8 +80,8 @@ void UnityBridge::init(std::string bindHost, uint16_t bindPort,
   socket_.bind(bind_endpoint_);
 
   socket_.set_option(udp::socket::reuse_address(true));
-  socket_.set_option(udp::socket::send_buffer_size(1000*Buffer::MAX_PKT_LEN));
-  socket_.set_option(udp::socket::receive_buffer_size(1000*Buffer::MAX_PKT_LEN));
+  socket_.set_option(udp::socket::send_buffer_size(1000*MAX_PKT_LEN));
+  socket_.set_option(udp::socket::receive_buffer_size(1000*MAX_PKT_LEN));
 
   async_read();
   io_thread_ = boost::thread(boost::bind(&boost::asio::io_service::run, &io_service_));
@@ -70,7 +93,8 @@ void UnityBridge::async_read()
 {
   if (!socket_.is_open()) return;
 
-  socket_.async_receive_from(boost::asio::buffer(read_buffer_, Buffer::MAX_PKT_LEN),
+  MutexLock lock(read_mutex_);
+  socket_.async_receive_from(boost::asio::buffer(read_buffer_, MAX_PKT_LEN),
                              remote_endpoint_,
                              boost::bind(&UnityBridge::async_read_end,
                                          this,
@@ -80,31 +104,44 @@ void UnityBridge::async_read()
 
 // ----------------------------------------------------------------------------
 
-void UnityBridge::async_read_end(const boost::system::error_code &error, size_t bytes_transferred)
+void UnityBridge::async_read_end(const boost::system::error_code &error,
+                                 size_t bytes_transferred)
 {
   if (!error) {
-    uint8_t *ptr = read_buffer_;
-
-    int32_t timestamp_secs, timestamp_nsecs;
-    memcpy(&timestamp_secs, ptr, sizeof(int32_t)); ptr += sizeof(int32_t);
-    memcpy(&timestamp_nsecs, ptr, sizeof(int32_t)); ptr += sizeof(int32_t);
-
-    float accel_x, accel_y, accel_z;
-    memcpy(&accel_x, ptr, sizeof(float)); ptr += sizeof(float);
-    memcpy(&accel_y, ptr, sizeof(float)); ptr += sizeof(float);
-    memcpy(&accel_z, ptr, sizeof(float)); ptr += sizeof(float);
-
-    float gyro_x, gyro_y, gyro_z;
-    memcpy(&gyro_x, ptr, sizeof(float)); ptr += sizeof(float);
-    memcpy(&gyro_y, ptr, sizeof(float)); ptr += sizeof(float);
-    memcpy(&gyro_z, ptr, sizeof(float)); ptr += sizeof(float);
-
-    newImuData_ = true;
-
-    // notify the delegate
-    if (cbPhysics_) cbPhysics_(timestamp_secs, timestamp_nsecs);
+    MutexLock lock(read_mutex_);
+    parse_imu_msg(read_buffer_, bytes_transferred, accel_, gyro_);
   }
+
   async_read();
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::parse_imu_msg(uint8_t const * buf, size_t len,
+                                float accel[3], float gyro[3])
+{
+  int32_t timestamp_secs, timestamp_nsecs;
+  memcpy(&timestamp_secs, buf, sizeof(int32_t)); buf += sizeof(int32_t);
+  memcpy(&timestamp_nsecs, buf, sizeof(int32_t)); buf += sizeof(int32_t);
+
+  // accelerometer measurement
+  memcpy(&accel[0], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&accel[1], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&accel[2], buf, sizeof(float)); buf += sizeof(float);
+
+  // gyro measurement
+  memcpy(&gyro[0], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&gyro[1], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&gyro[2], buf, sizeof(float)); buf += sizeof(float);
+
+  // indicate that we have new data to read
+  newImuData_ = true;
+
+  // Notify the delegate.
+  // NOTE: The assumption here is that we receive an IMU message on every
+  // physics timestep in Unity. This corresponds to an IMU message being
+  // sent on every FixedUpdate() call.
+  if (cbPhysics_) cbPhysics_(timestamp_secs, timestamp_nsecs);
 }
 
 // ----------------------------------------------------------------------------

@@ -67,7 +67,11 @@ bool UnityBoard::new_imu_data()
 
 bool UnityBoard::imu_read(float accel[3], float* temperature, float gyro[3], uint64_t* time_us)
 {
+  unity_.getNewImuData(accel, gyro);
 
+  *temperature = 27.0f;
+  *time_us = clock_micros();
+  return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -132,4 +136,4 @@ bool UnityBoard::memory_write(const void *src, size_t len)
 // Private Methods
 // ----------------------------------------------------------------------------
 
-}
+} // ns rosflight_unity
