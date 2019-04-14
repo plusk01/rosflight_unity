@@ -23,6 +23,15 @@ namespace rosflight_unity
 
   class UnityBridge
   {
+  private:
+    static constexpr int SIMCOM_MSG_TYPE_LEN = 1;
+    enum class SimComMsg : uint8_t {
+      SIMCONFIG = 0x00,
+      VEHCONFIG = 0x01,
+      IMU = 0x02,
+      MOTORCMD = 0x03
+    };
+
   public:
     UnityBridge();
     ~UnityBridge();

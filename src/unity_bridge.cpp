@@ -109,7 +109,19 @@ void UnityBridge::async_read_end(const boost::system::error_code &error,
 {
   if (!error) {
     MutexLock lock(read_mutex_);
-    parse_imu_msg(read_buffer_, bytes_transferred, accel_, gyro_);
+
+    // Extract just the message data (i.e., seek past bytes indicated msg type)
+    uint8_t * data = &read_buffer_[SIMCOM_MSG_TYPE_LEN];
+
+    switch (read_buffer_[0]) {
+      case static_cast<uint8_t>(SimComMsg::IMU):
+        parse_imu_msg(data, bytes_transferred, accel_, gyro_);
+        break;
+
+      default: // unrecognized msg type
+        break;
+    }
+
   }
 
   async_read();
