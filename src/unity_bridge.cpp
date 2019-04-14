@@ -29,7 +29,7 @@ UnityBridge::~UnityBridge()
 
 // ----------------------------------------------------------------------------
 
-void UnityBridge::onPhysicsUpdate(std::function<void(void)> fn)
+void UnityBridge::onPhysicsUpdate(std::function<void(int32_t,int32_t)> fn)
 {
   cbPhysics_ = fn;
 }
@@ -61,7 +61,6 @@ void UnityBridge::init(std::string bindHost, uint16_t bindPort,
   socket_.set_option(udp::socket::receive_buffer_size(1000*Buffer::MAX_PKT_LEN));
 
   async_read();
-  // io_thread_ = std::thread([&] { io_service_.run(); });
   io_thread_ = boost::thread(boost::bind(&boost::asio::io_service::run, &io_service_));
 }
 
@@ -84,13 +83,11 @@ void UnityBridge::async_read()
 void UnityBridge::async_read_end(const boost::system::error_code &error, size_t bytes_transferred)
 {
   if (!error) {
-    // std::cout << "Recvd " << bytes_transferred << " bytes." << std::endl;
-
     uint8_t *ptr = read_buffer_;
 
-
-    double timestamp;
-    memcpy(&timestamp, ptr, sizeof(double)); ptr += sizeof(double);
+    int32_t timestamp_secs, timestamp_nsecs;
+    memcpy(&timestamp_secs, ptr, sizeof(int32_t)); ptr += sizeof(int32_t);
+    memcpy(&timestamp_nsecs, ptr, sizeof(int32_t)); ptr += sizeof(int32_t);
 
     float accel_x, accel_y, accel_z;
     memcpy(&accel_x, ptr, sizeof(float)); ptr += sizeof(float);
@@ -105,8 +102,7 @@ void UnityBridge::async_read_end(const boost::system::error_code &error, size_t 
     newImuData_ = true;
 
     // notify the delegate
-    if (cbPhysics_) cbPhysics_();
-
+    if (cbPhysics_) cbPhysics_(timestamp_secs, timestamp_nsecs);
   }
   async_read();
 }

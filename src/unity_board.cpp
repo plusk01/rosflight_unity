@@ -28,6 +28,17 @@ void UnityBoard::setVehicleName(std::string name)
   if (!name.empty()) vehicleName_ = name;
 }
 
+// ----------------------------------------------------------------------------
+
+void UnityBoard::setTime(uint32_t secs, uint64_t nsecs)
+{
+  double t = secs + nsecs*1e-9;
+
+  // capture "power on" time so that ROSflight clock is secs from start up
+  if (time_init_ == 0) time_init_ = t;
+
+  time_ = t - time_init_;
+}
 
 // ----------------------------------------------------------------------------
 // Overrides (required by rosflight firmware)
@@ -35,14 +46,14 @@ void UnityBoard::setVehicleName(std::string name)
 
 uint32_t UnityBoard::clock_millis()
 {
-
+  return static_cast<uint32_t>(time_ * 1e3);
 }
 
 // ----------------------------------------------------------------------------
 
 uint64_t UnityBoard::clock_micros()
 {
-
+  return static_cast<uint64_t>(time_ * 1e6);
 }
 
 // ----------------------------------------------------------------------------

@@ -32,6 +32,14 @@ namespace rosflight_unity
      */
     void setVehicleName(std::string name);
 
+    /**
+     * @brief      Sets the time based on an external clock
+     *
+     * @param[in]  secs   The seconds only
+     * @param[in]  nsecs  The remainder in nanoseconds
+     */
+    void setTime(uint32_t secs, uint64_t nsecs);
+
     //
     // ROSflight overrides
     //
@@ -88,6 +96,9 @@ namespace rosflight_unity
 
   private:
     std::string vehicleName_ = "default"; ///< name of associated simulated vehicle
+
+    double time_init_ = 0; ///< initial time from external source
+    double time_ = 0; ///< time calculated from external source
 
     UnityBridge& unity_; ///< ref to an instantiated unity bridge
 

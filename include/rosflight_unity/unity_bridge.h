@@ -54,12 +54,12 @@ namespace rosflight_unity
     void init(std::string bindHost = "127.0.0.1", uint16_t bindPort = 2908,
               std::string remoteHost = "127.0.0.1", uint16_t remotePort = 2908);
 
-    void onPhysicsUpdate(std::function<void(void)> fn);
+    void onPhysicsUpdate(std::function<void(int32_t,int32_t)> fn);
 
     bool hasNewImuData() const { return newImuData_; };
 
   private:
-    std::function<void(void)> cbPhysics_;
+    std::function<void(int32_t,int32_t)> cbPhysics_;
 
     bool newImuData_ = false;
 
@@ -67,7 +67,6 @@ namespace rosflight_unity
     // boost::recursive_mutex read_mutex_;
 
     boost::asio::io_service io_service_;
-    // std::thread io_thread_;
     boost::thread io_thread_;
 
     boost::asio::ip::udp::socket socket_;

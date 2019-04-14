@@ -22,8 +22,12 @@ std::unique_ptr<rosflight_firmware::ROSflight> firmware;
 
 // ----------------------------------------------------------------------------
 
-void FixedUpdate()
+void FixedUpdate(int32_t secs, int32_t nsecs)
 {
+  // Use Unity clock as the external clock
+  board->setTime(secs, nsecs);
+
+
   firmware->run();
 }
 
@@ -47,7 +51,8 @@ int main(int argc, char *argv[])
   firmware->init();
 
   // Register a listener to the Unity physics update event
-  unity->onPhysicsUpdate(std::bind(FixedUpdate/*, std::placeholders::_1*/));
+  unity->onPhysicsUpdate(std::bind(FixedUpdate,
+                          std::placeholders::_1, std::placeholders::_2));
 
   ros::spin();
   return 0;
