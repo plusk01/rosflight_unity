@@ -38,6 +38,9 @@ int main(int argc, char *argv[])
   rosflight_unity::UnityBridge unity;
   unity.init();
 
+  unity.doConfigSim();
+  unity.doConfigVehicle();
+
   //
   // Initialize ROSflight autopilot
   //

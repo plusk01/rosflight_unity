@@ -58,6 +58,24 @@ void UnityBridge::getNewImuData(float accel[3], float gyro[3])
 }
 
 // ----------------------------------------------------------------------------
+
+void UnityBridge::doConfigSim()
+{
+  uint8_t bytes[MAX_PKT_LEN];
+  size_t len = pack_simconfig_msg(bytes);
+  write(bytes, len);
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::doConfigVehicle()
+{
+  uint8_t bytes[MAX_PKT_LEN];
+  size_t len = pack_vehconfig_msg(bytes);
+  write(bytes, len);
+}
+
+// ----------------------------------------------------------------------------
 // Private Methods
 // ----------------------------------------------------------------------------
 
@@ -104,7 +122,7 @@ void UnityBridge::async_read()
 
 // ----------------------------------------------------------------------------
 
-void UnityBridge::async_read_end(const boost::system::error_code &error,
+void UnityBridge::async_read_end(const boost::system::error_code& error,
                                  size_t bytes_transferred)
 {
   if (!error) {
@@ -127,6 +145,63 @@ void UnityBridge::async_read_end(const boost::system::error_code &error,
   async_read();
 }
 
+// ----------------------------------------------------------------------------
+
+void UnityBridge::async_write(bool check_write_state)
+{
+  if (check_write_state && write_in_progress_) return;
+
+  MutexLock lock(write_mutex_);
+  if (write_queue_.empty()) return;
+
+  write_in_progress_ = true;
+  Buffer * buffer = write_queue_.front();
+  socket_.async_send_to(boost::asio::buffer(buffer->dpos(), buffer->nbytes()),
+                        remote_endpoint_,
+                        boost::bind(&UnityBridge::async_write_end,
+                                    this,
+                                    boost::asio::placeholders::error,
+                                    boost::asio::placeholders::bytes_transferred));
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::async_write_end(const boost::system::error_code& error,
+                                  size_t bytes_transferred)
+{
+  if (!error) {
+    MutexLock lock(write_mutex_);
+
+    Buffer * buffer = write_queue_.front();
+    buffer->pos += bytes_transferred;
+    if (buffer->empty()) {
+      write_queue_.pop_front();
+      delete buffer;
+    }
+
+    if (write_queue_.empty())
+      write_in_progress_ = false;
+    else
+      async_write(false);
+  }
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::write(uint8_t const * buf, size_t len)
+{
+  Buffer * buffer = new Buffer(buf, len);
+
+  {
+    MutexLock lock(write_mutex_);
+    write_queue_.push_back(buffer);
+  }
+
+  async_write(true);
+}
+
+// ----------------------------------------------------------------------------
+// Parsers for Incoming Messages
 // ----------------------------------------------------------------------------
 
 void UnityBridge::parse_imu_msg(uint8_t const * buf, size_t len,
@@ -157,5 +232,29 @@ void UnityBridge::parse_imu_msg(uint8_t const * buf, size_t len,
 }
 
 // ----------------------------------------------------------------------------
+// Packers for Outgoing Messages
+// ----------------------------------------------------------------------------
+
+size_t UnityBridge::pack_simconfig_msg(uint8_t * buf)
+{
+  size_t len = 0;
+
+  // Set msg id
+  buf[0] = static_cast<uint8_t>(SimComMsg::SIMCONFIG); len += 1;
+
+  return len;
+}
+
+// ----------------------------------------------------------------------------
+
+size_t UnityBridge::pack_vehconfig_msg(uint8_t * buf)
+{
+  size_t len = 0;
+
+  // Set msg id
+  buf[0] = static_cast<uint8_t>(SimComMsg::VEHCONFIG); len += 1;
+
+  return len;
+}
 
 } // ns rosflight_unity

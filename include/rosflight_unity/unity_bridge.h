@@ -10,6 +10,7 @@
 #pragma once
 
 #include <iostream>
+#include <list>
 #include <string>
 #include <thread>
 #include <functional>
@@ -32,6 +33,30 @@ namespace rosflight_unity
       MOTORCMD = 0x03
     };
 
+    // largest expected packet size
+    static constexpr int MAX_PKT_LEN = 100;
+    struct Buffer
+    {
+      uint8_t data[MAX_PKT_LEN];
+      size_t len;
+      size_t pos;
+
+      Buffer() : len(0), pos(0) {}
+
+      Buffer(const uint8_t *src, size_t length) : len(length), pos(0)
+      {
+        assert(length <= MAX_PKT_LEN); //! \todo Do something less catastrophic here
+        memcpy(data, src, length);
+      }
+
+      const uint8_t * dpos() const { return data + pos; }
+      size_t nbytes() const { return len - pos; }
+      void add_byte(uint8_t byte) { data[len++] = byte; }
+      uint8_t consume_byte() { return data[pos++]; }
+      bool empty() const { return pos >= len; }
+      bool full() const { return len >= MAX_PKT_LEN; }
+    };
+
   public:
     UnityBridge();
     ~UnityBridge();
@@ -45,7 +70,7 @@ namespace rosflight_unity
      * @param[in]  remotePort  The remote port
      */
     void init(std::string bindHost = "127.0.0.1", uint16_t bindPort = 2908,
-              std::string remoteHost = "127.0.0.1", uint16_t remotePort = 2908);
+              std::string remoteHost = "127.0.0.1", uint16_t remotePort = 2909);
 
     /**
      * @brief      Register a callback to be run on each Unity physics step
@@ -70,10 +95,17 @@ namespace rosflight_unity
      */
     void getNewImuData(float accel[3], float gyro[3]);
 
-  private:
-    // largest expected packet size
-    static constexpr int MAX_PKT_LEN = 100;
+    /**
+     * @brief      Configure the Unity simulation
+     */
+    void doConfigSim();
 
+    /**
+     * @brief      Configure physical parameters of simulation vehicle
+     */
+    void doConfigVehicle();
+
+  private:
     // registered callback for Unity physics step
     std::function<void(int32_t,int32_t)> cbPhysics_;
 
@@ -97,9 +129,21 @@ namespace rosflight_unity
     boost::asio::ip::udp::endpoint remote_endpoint_;
 
     uint8_t read_buffer_[MAX_PKT_LEN];
+    // std::list<Buffer*> read_queue_;
+
+    std::list<Buffer*> write_queue_;
+    bool write_in_progress_ = false;
 
     void async_read();
     void async_read_end(const boost::system::error_code &error, size_t bytes_transferred);
+
+    void async_write(bool check_write_state);
+    void async_write_end(const boost::system::error_code &error, size_t bytes_transferred);
+    void write(uint8_t const * buf, size_t len);
+
+    //
+    // Parsers
+    //
 
     /**
      * @brief      Parse IMU message from Unity-side (SimCom)
@@ -110,6 +154,28 @@ namespace rosflight_unity
      * @param      gyro   Parsed gyro data
      */
     void parse_imu_msg(const uint8_t* buf, size_t len, float accel[3], float gyro[3]);
+
+    //
+    // Packers
+    //
+
+    /**
+     * @brief      Pack a SimConfig Message
+     *
+     * @param      buf   The buffer to fill with message data
+     *
+     * @return     Length of message
+     */
+    size_t pack_simconfig_msg(uint8_t * buf);
+
+    /**
+     * @brief      Pack a VehConfig Message
+     *
+     * @param      buf   The buffer to fill with message data
+     *
+     * @return     Length of message
+     */
+    size_t pack_vehconfig_msg(uint8_t * buf);
   };
 
 } // ns rosflight_unity
