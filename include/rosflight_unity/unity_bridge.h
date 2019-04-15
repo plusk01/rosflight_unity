@@ -105,6 +105,14 @@ namespace rosflight_unity
      */
     void doConfigVehicle();
 
+    /**
+     * @brief      Send motor commands to simulation
+     *
+     * @param      motors     The motor values
+     * @param[in]  numMotors  The number of motors
+     */
+    void doMotorCmd(float const * motors, size_t numMotors);
+
   private:
     // registered callback for Unity physics step
     std::function<void(int32_t,int32_t)> cbPhysics_;
@@ -176,6 +184,17 @@ namespace rosflight_unity
      * @return     Length of message
      */
     size_t pack_vehconfig_msg(uint8_t * buf);
+
+    /**
+     * @brief      Pack a MotorCmd Message
+     *
+     * @param      motors     Motor values
+     * @param[in]  numMotors  The number of motors
+     * @param      buf        The buffer to fill with message data
+     *
+     * @return     Length of message
+     */
+    size_t pack_motorcmd_msg(float const * motors, size_t numMotors, uint8_t * buf);
   };
 
 } // ns rosflight_unity
