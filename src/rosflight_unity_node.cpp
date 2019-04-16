@@ -11,6 +11,7 @@
 #include <ros/ros.h>
 
 #include <rosflight.h>
+#include <rosflight_msgs/RCRaw.h>
 
 #include "rosflight_unity/unity_board.h"
 #include "rosflight_unity/unity_bridge.h"
@@ -31,9 +32,28 @@ void FixedUpdate(int32_t secs, int32_t nsecs)
 
 // ----------------------------------------------------------------------------
 
+void rc_callback(const rosflight_msgs::RCRawConstPtr& msg)
+{
+  board->setRC(msg->values.data());
+}
+
+// ----------------------------------------------------------------------------
+
 int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "rosflight_unity");
+
+  //
+  // ROS connections
+  //
+
+  ros::NodeHandle nh("~");
+
+  ros::Subscriber sub_rc = nh.subscribe("rc_in", 1, rc_callback);
+
+  //
+  // Unity bridge setup
+  //
 
   rosflight_unity::UnityBridge unity;
   unity.init();

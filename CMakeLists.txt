@@ -15,6 +15,7 @@ endif()
 find_package(catkin REQUIRED
     roscpp
     rosflight_firmware
+    rosflight_msgs
 )
 
 ## System dependencies are found with CMake's conventions

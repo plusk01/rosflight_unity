@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
+#include <chrono>
 
 #include <rosflight_firmware/udp_board.h>
 
@@ -21,6 +22,9 @@ namespace rosflight_unity
 
   class UnityBoard : public rosflight_firmware::UDPBoard
   {
+  private:
+    static constexpr int MAX_RC_CHANNELS = 8;
+
   public:
     UnityBoard(UnityBridge& unity);
     ~UnityBoard() = default;
@@ -39,6 +43,8 @@ namespace rosflight_unity
      * @param[in]  nsecs  The remainder in nanoseconds
      */
     void setTime(uint32_t secs, uint64_t nsecs);
+
+    void setRC(const uint16_t rc[MAX_RC_CHANNELS]);
 
     //
     // ROSflight overrides
@@ -107,10 +113,13 @@ namespace rosflight_unity
     rosflight_firmware::BackupData get_backup_data() override { return {}; }
 
   private:
-    std::string vehicleName_ = "default"; ///< name of associated simulated vehicle
+    std::string vehicleName_ = "unity"; ///< name of associated simulated vehicle
 
     double time_init_ = 0; ///< initial time from external source
     double time_ = 0; ///< time calculated from external source
+
+    uint16_t latestRC_[MAX_RC_CHANNELS]; ///< most recent incoming RC values
+    std::chrono::time_point<std::chrono::high_resolution_clock> latestRCTime_;
 
     UnityBridge& unity_; ///< ref to an instantiated unity bridge
 

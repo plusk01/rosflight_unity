@@ -40,6 +40,12 @@ void UnityBoard::setTime(uint32_t secs, uint64_t nsecs)
   time_ = t - time_init_;
 }
 
+void UnityBoard::setRC(const uint16_t rc[MAX_RC_CHANNELS])
+{
+  std::memcpy(latestRC_, rc, MAX_RC_CHANNELS*sizeof(uint16_t));
+  latestRCTime_ = std::chrono::high_resolution_clock::now();
+}
+
 // ----------------------------------------------------------------------------
 // Overrides (required by rosflight firmware)
 // ----------------------------------------------------------------------------
@@ -99,23 +105,32 @@ void UnityBoard::pwm_disable()
 
 void UnityBoard::rc_init(rc_type_t rc_type)
 {
-
+  latestRC_[0] = 1500; // A
+  latestRC_[1] = 1500; // E
+  latestRC_[3] = 1000; // T
+  latestRC_[2] = 1500; // R
+  latestRC_[4] = 1000; // attitude override
+  latestRC_[5] = 1000; // arm
+  latestRC_[6] = 1000;
+  latestRC_[7] = 1000;
 }
 
 // ----------------------------------------------------------------------------
 
 float UnityBoard::rc_read(uint8_t channel)
 {
-
+  // Map pwm [1000, 2000] usec to normalized [0, 1]
+  return static_cast<float>(latestRC_[channel] - 1000) / 1000.0;
 }
-
-
 
 // ----------------------------------------------------------------------------
 
 bool UnityBoard::rc_lost()
 {
-
+  constexpr double thresh = 200; // [ms]
+  auto now = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> elapsed = now - latestRCTime_;
+  return (elapsed.count() > thresh);
 }
 
 // ----------------------------------------------------------------------------
