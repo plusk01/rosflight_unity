@@ -76,28 +76,44 @@ bool UnityBoard::imu_read(float accel[3], float* temperature, float gyro[3], uin
 
 // ----------------------------------------------------------------------------
 
-void UnityBoard::pwm_init(bool cppm, uint32_t refresh_rate, uint16_t idle_pwm)
+void UnityBoard::pwm_init(uint32_t refresh_rate, uint16_t idle_pwm)
 {
 
 }
 
 // ----------------------------------------------------------------------------
 
-bool UnityBoard::pwm_lost()
+void UnityBoard::pwm_write(uint8_t channel, float value)
 {
 
 }
 
 // ----------------------------------------------------------------------------
 
-uint16_t UnityBoard::pwm_read(uint8_t channel)
+void UnityBoard::pwm_disable()
 {
 
 }
 
 // ----------------------------------------------------------------------------
 
-void UnityBoard::pwm_write(uint8_t channel, uint16_t value)
+void UnityBoard::rc_init(rc_type_t rc_type)
+{
+
+}
+
+// ----------------------------------------------------------------------------
+
+float UnityBoard::rc_read(uint8_t channel)
+{
+
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+bool UnityBoard::rc_lost()
 {
 
 }

@@ -61,24 +61,32 @@ namespace rosflight_unity
     bool imu_read(float accel[3], float* temperature, float gyro[3], uint64_t* time_us) override;
     void imu_not_responding_error() override {}
 
-    bool mag_check() override { return false; }
+    bool mag_present() override { return false; }
     void mag_read(float mag[3]) override {}
+    void mag_update() override {}
 
-    bool baro_check() override { return false; }
+    bool baro_present() override { return false; }
     void baro_read(float *pressure, float *temperature) override {}
+    void baro_update() override {}
 
-    bool diff_pressure_check() override { return false; }
+    bool diff_pressure_present() override { return false; }
     void diff_pressure_read(float *diff_pressure, float *temperature) override {}
+    void diff_pressure_update() override {}
 
-    bool sonar_check() override { return false; }
+    bool sonar_present() override { return false; }
     float sonar_read() override { return 0.0f; }
+    void sonar_update() override {}
 
     // PWM
     // TODO make these deal in normalized (-1 to 1 or 0 to 1) values (not pwm-specific)
-    void pwm_init(bool cppm, uint32_t refresh_rate, uint16_t idle_pwm) override;
-    bool pwm_lost() override;
-    uint16_t pwm_read(uint8_t channel) override;
-    void pwm_write(uint8_t channel, uint16_t value) override;
+    void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override;
+    void pwm_write(uint8_t channel, float value) override;
+    void pwm_disable() override;
+
+    // RC
+    void rc_init(rc_type_t rc_type) override;
+    float rc_read(uint8_t channel) override;
+    bool rc_lost() override;
 
     // non-volatile memory
     void memory_init() override {}
@@ -93,6 +101,10 @@ namespace rosflight_unity
     void led1_on() override {}
     void led1_off() override {}
     void led1_toggle() override {}
+
+    // Backup memory
+    bool has_backup_data() override { return false; }
+    rosflight_firmware::BackupData get_backup_data() override { return {}; }
 
   private:
     std::string vehicleName_ = "default"; ///< name of associated simulated vehicle
