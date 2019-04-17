@@ -77,10 +77,10 @@ void UnityBridge::doConfigVehicle()
 
 // ----------------------------------------------------------------------------
 
-void UnityBridge::doMotorCmd(float const * motors, size_t numMotors)
+void UnityBridge::doMotorCmd(uint8_t channel, float value)
 {
   uint8_t bytes[MAX_PKT_LEN];
-  size_t len = pack_motorcmd_msg(motors, numMotors, bytes);
+  size_t len = pack_motorcmd_msg(channel, value, bytes);
   write(bytes, len);
 }
 
@@ -268,7 +268,7 @@ size_t UnityBridge::pack_vehconfig_msg(uint8_t * buf)
 
 // ----------------------------------------------------------------------------
 
-size_t UnityBridge::pack_motorcmd_msg(float const * motors, size_t numMotors,
+size_t UnityBridge::pack_motorcmd_msg(uint8_t channel, float value,
                                       uint8_t * buf)
 {
   size_t len = 0;
@@ -276,9 +276,11 @@ size_t UnityBridge::pack_motorcmd_msg(float const * motors, size_t numMotors,
   // Set msg id
   buf[0] = static_cast<uint8_t>(SimComMsg::MOTORCMD); len += 1;
 
-  for (int i=0; i<numMotors; ++i) {
-    memcpy(&buf[len], &motors[i], sizeof(float)); len += sizeof(float);
-  }
+  // which motor does this value belong to?
+  buf[1] = channel; len += 1;
+
+  // commanded motor value
+  memcpy(&buf[len], &value, sizeof(float)); len += sizeof(float);
 
   return len;
 }

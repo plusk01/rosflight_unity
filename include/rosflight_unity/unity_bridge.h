@@ -106,12 +106,12 @@ namespace rosflight_unity
     void doConfigVehicle();
 
     /**
-     * @brief      Send motor commands to simulation
+     * @brief      Send a motor command to Unity
      *
-     * @param      motors     The motor values
-     * @param[in]  numMotors  The number of motors
+     * @param[in]  channel  Zero-indexed motor number
+     * @param[in]  value    Commanded pwm value [0, 1]
      */
-    void doMotorCmd(float const * motors, size_t numMotors);
+    void doMotorCmd(uint8_t channel, float value);
 
   private:
     // registered callback for Unity physics step
@@ -188,13 +188,13 @@ namespace rosflight_unity
     /**
      * @brief      Pack a MotorCmd Message
      *
-     * @param      motors     Motor values
-     * @param[in]  numMotors  The number of motors
-     * @param      buf        The buffer to fill with message data
+     * @param      channel  Zero-indexed motor number
+     * @param[in]  value    Commaned pwm value [0, 1]
+     * @param      buf      The buffer to fill with message data
      *
      * @return     Length of message
      */
-    size_t pack_motorcmd_msg(float const * motors, size_t numMotors, uint8_t * buf);
+    size_t pack_motorcmd_msg(uint8_t channel, float value, uint8_t * buf);
   };
 
 } // ns rosflight_unity

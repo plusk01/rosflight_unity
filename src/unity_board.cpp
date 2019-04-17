@@ -82,23 +82,19 @@ bool UnityBoard::imu_read(float accel[3], float* temperature, float gyro[3], uin
 
 // ----------------------------------------------------------------------------
 
-void UnityBoard::pwm_init(uint32_t refresh_rate, uint16_t idle_pwm)
-{
-
-}
-
-// ----------------------------------------------------------------------------
-
 void UnityBoard::pwm_write(uint8_t channel, float value)
 {
-
+  unity_.doMotorCmd(channel, value);
 }
 
 // ----------------------------------------------------------------------------
 
 void UnityBoard::pwm_disable()
 {
-
+  static constexpr int MAX_NUM_MOTORS = 8;
+  for (uint8_t i=0; i<MAX_NUM_MOTORS; ++i) {
+    pwm_write(i, 0.0f);
+  }
 }
 
 // ----------------------------------------------------------------------------
