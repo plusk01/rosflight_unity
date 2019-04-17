@@ -40,6 +40,8 @@ void UnityBoard::setTime(uint32_t secs, uint64_t nsecs)
   time_ = t - time_init_;
 }
 
+// ----------------------------------------------------------------------------
+
 void UnityBoard::setRC(const uint16_t rc[MAX_RC_CHANNELS])
 {
   std::memcpy(latestRC_, rc, MAX_RC_CHANNELS*sizeof(uint16_t));

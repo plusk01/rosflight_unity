@@ -85,7 +85,7 @@ namespace rosflight_unity
 
     // PWM
     // TODO make these deal in normalized (-1 to 1 or 0 to 1) values (not pwm-specific)
-    void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override;
+    void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override {}
     void pwm_write(uint8_t channel, float value) override;
     void pwm_disable() override;
 
