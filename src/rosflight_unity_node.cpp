@@ -10,6 +10,8 @@
 
 #include <ros/ros.h>
 
+#include <geometry_msgs/PoseStamped.h>
+
 #include <rosflight.h>
 #include <rosflight_msgs/RCRaw.h>
 
@@ -24,6 +26,19 @@ std::unique_ptr<rosflight_firmware::ROSflight> firmware;
 
 void FixedUpdate(int32_t secs, int32_t nsecs)
 {
+
+  //
+  // ROS Communications
+  //
+
+  geometry_msgs::PoseStamped msg;
+  msg.header.stamp = ros::Time::now();
+
+
+  //
+  // Software-in-the-loop
+  //
+
   // Use Unity clock as the external clock
   board->setTime(secs, nsecs);
 
@@ -50,6 +65,7 @@ int main(int argc, char *argv[])
   ros::NodeHandle nh("~");
 
   ros::Subscriber sub_rc = nh.subscribe("rc_in", 1, rc_callback);
+  // pub_truth = nh.advertise<>("rc_in", 1, rc_callback);
 
   //
   // Unity bridge setup

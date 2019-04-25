@@ -30,7 +30,8 @@ namespace rosflight_unity
       SIMCONFIG = 0x00,
       VEHCONFIG = 0x01,
       IMU = 0x02,
-      MOTORCMD = 0x03
+      MOTORCMD = 0x03,
+      TRUTH = 0x04
     };
 
     // largest expected packet size
@@ -55,6 +56,23 @@ namespace rosflight_unity
       uint8_t consume_byte() { return data[pos++]; }
       bool empty() const { return pos >= len; }
       bool full() const { return len >= MAX_PKT_LEN; }
+    };
+
+  public:
+
+    /**
+     * @brief      TruthMsg description
+     *
+     * @member  x  Position of the vehicle w.r.t world
+     * @member  v  Velocity of the vehicle w.r.t world
+     * @member  q  Orientation of the vehicle w.r.t world (w, x, y, z)
+     */
+    struct TruthMsg
+    {
+        int32_t timestamp_secs, timestamp_nsecs;
+        float x[3];
+        float v[3];
+        float q[4]; // quat: w, x, y, z
     };
 
   public:
@@ -96,6 +114,14 @@ namespace rosflight_unity
     void getNewImuData(float accel[3], float gyro[3]);
 
     /**
+     * @brief      Return the latest truth data. These are inertial quantities
+     *             (i.e., body w.r.t world) expressed in NED world frame.
+     *
+     * @return     truth Truth message w.r.t NED world frame
+     */
+    TruthMsg getTruthData();
+
+    /**
      * @brief      Configure the Unity simulation
      */
     void doConfigSim();
@@ -120,6 +146,9 @@ namespace rosflight_unity
     // IMU data
     bool newImuData_ = false;
     float accel_[3], gyro_[3];
+
+    // Truth data
+    TruthMsg truth_;
 
     // Use re-entrant mutex so we don't cause a deadlock when
     // async_read_end (which has the lock) calls cbPhysics_,
@@ -162,6 +191,15 @@ namespace rosflight_unity
      * @param      gyro   Parsed gyro data
      */
     void parse_imu_msg(const uint8_t* buf, size_t len, float accel[3], float gyro[3]);
+
+    /**
+     * @brief      Parse Truth message from Unity-side (SimCOm)
+     *
+     * @param      buf   The buffer of data to parse
+     * @param[in]  len   The length of the buffer
+     * @param[out] truth Parsed truth data (w.r.t Unity world)
+     */
+    void parse_truth_msg(uint8_t const * buf, size_t len, TruthMsg& truth);
 
     //
     // Packers

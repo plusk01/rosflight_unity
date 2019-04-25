@@ -59,6 +59,37 @@ void UnityBridge::getNewImuData(float accel[3], float gyro[3])
 
 // ----------------------------------------------------------------------------
 
+UnityBridge::TruthMsg UnityBridge::getTruthData()
+{
+  MutexLock lock(read_mutex_);
+
+  TruthMsg truth;
+
+  truth.timestamp_secs = truth_.timestamp_secs;
+  truth.timestamp_nsecs = truth_.timestamp_nsecs;
+
+  // Unity (left-handed) to NED (right-handed)
+  truth.x[0] =  truth_.x[0];
+  truth.x[1] = -truth_.x[2];
+  truth.x[2] = -truth_.x[1];
+
+  // Unity (left-handed) to NED (right-handed)
+  truth.v[0] =  truth_.v[0];
+  truth.v[1] = -truth_.v[2];
+  truth.v[2] = -truth_.v[1];
+
+  // Unity (left-handed) to NED (right-handed)
+  // see: https://gamedev.stackexchange.com/a/157954
+  truth.q[0] =  truth_.q[0];
+  truth.q[1] = -truth_.q[1];
+  truth.q[2] =  truth_.q[3];
+  truth.q[3] =  truth_.q[2];
+
+  return truth;
+}
+
+// ----------------------------------------------------------------------------
+
 void UnityBridge::doConfigSim()
 {
   uint8_t bytes[MAX_PKT_LEN];
@@ -143,6 +174,10 @@ void UnityBridge::async_read_end(const boost::system::error_code& error,
     switch (read_buffer_[0]) {
       case static_cast<uint8_t>(SimComMsg::IMU):
         parse_imu_msg(data, bytes_transferred, accel_, gyro_);
+        break;
+
+      case static_cast<uint8_t>(SimComMsg::TRUTH):
+        parse_truth_msg(data, bytes_transferred, truth_);
         break;
 
       default: // unrecognized msg type
@@ -238,6 +273,30 @@ void UnityBridge::parse_imu_msg(uint8_t const * buf, size_t len,
   // physics timestep in Unity. This corresponds to an IMU message being
   // sent on every FixedUpdate() call.
   if (cbPhysics_) cbPhysics_(timestamp_secs, timestamp_nsecs);
+}
+
+// ----------------------------------------------------------------------------
+
+void UnityBridge::parse_truth_msg(uint8_t const * buf, size_t len, TruthMsg& truth)
+{
+  memcpy(&truth.timestamp_secs, buf, sizeof(int32_t)); buf += sizeof(int32_t);
+  memcpy(&truth.timestamp_nsecs, buf, sizeof(int32_t)); buf += sizeof(int32_t);
+
+  // position
+  memcpy(&truth.x[0], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.x[1], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.x[2], buf, sizeof(float)); buf += sizeof(float);
+
+  // velocity
+  memcpy(&truth.v[0], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.v[1], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.v[2], buf, sizeof(float)); buf += sizeof(float);
+
+  // quaternion (w, x, y, z)
+  memcpy(&truth.q[0], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.q[1], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.q[2], buf, sizeof(float)); buf += sizeof(float);
+  memcpy(&truth.q[3], buf, sizeof(float)); buf += sizeof(float);
 }
 
 // ----------------------------------------------------------------------------
