@@ -25,7 +25,12 @@ public:
   : nh_(nh)
   {
     sub_rc_ = nh.subscribe("rc_in", 1, &ROSflightUnity::rc_callback, this);
+
     pub_truth_ = nh.advertise<geometry_msgs::PoseStamped>("truth", 1);
+
+    // TODO: Does this *really* really belong here?
+    pub_att_correction_ = nh.advertise<geometry_msgs::Quaternion>("/attitude_correction", 1);
+    nh.getParam("use_external_attitude", use_external_attitude_);
 
     //
     // Unity bridge setup
@@ -58,13 +63,17 @@ private:
   // ros
   ros::NodeHandle nh_;
   ros::Subscriber sub_rc_;
-  ros::Publisher pub_truth_;
+  ros::Publisher pub_truth_, pub_att_correction_;
 
   // ROSflight SIL objects
   std::unique_ptr<rosflight_unity::UnityBridge> unity_;
   std::unique_ptr<rosflight_unity::UnityBoard> board_;
   std::unique_ptr<rosflight_firmware::Mavlink> mavlink_;
   std::unique_ptr<rosflight_firmware::ROSflight> firmware_;
+
+  bool use_external_attitude_ = true; ///< update attitude estimate with truth
+
+  // --------------------------------------------------------------------------
 
   void FixedUpdate(int32_t secs, int32_t nsecs)
   {
@@ -107,6 +116,9 @@ private:
     msg.pose.orientation.z = truth.q[3];
     msg.pose.orientation.w = truth.q[0];
     pub_truth_.publish(msg);
+
+    // publish attitude correction
+    if (use_external_attitude_) pub_att_correction_.publish(msg.pose.orientation);
   }
 
 };
