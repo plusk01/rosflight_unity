@@ -18,79 +18,107 @@
 #include "rosflight_unity/unity_board.h"
 #include "rosflight_unity/unity_bridge.h"
 
-std::unique_ptr<rosflight_unity::UnityBoard> board;
-std::unique_ptr<rosflight_firmware::Mavlink> mavlink;
-std::unique_ptr<rosflight_firmware::ROSflight> firmware;
+class ROSflightUnity
+{
+public:
+  ROSflightUnity(ros::NodeHandle& nh)
+  : nh_(nh)
+  {
+    sub_rc_ = nh.subscribe("rc_in", 1, &ROSflightUnity::rc_callback, this);
+    pub_truth_ = nh.advertise<geometry_msgs::PoseStamped>("truth", 1);
+
+    //
+    // Unity bridge setup
+    //
+
+    unity_.reset(new rosflight_unity::UnityBridge);
+    unity_->init();
+
+    unity_->doConfigSim();
+    unity_->doConfigVehicle();
+
+    //
+    // Initialize ROSflight autopilot
+    //
+
+    board_.reset(new rosflight_unity::UnityBoard(*unity_));
+    mavlink_.reset(new rosflight_firmware::Mavlink(*board_));
+    firmware_.reset(new rosflight_firmware::ROSflight(*board_, *mavlink_));
+
+    firmware_->init();
+
+    // Register a listener to the Unity physics update event
+    unity_->onPhysicsUpdate(std::bind(&ROSflightUnity::FixedUpdate, this,
+                                std::placeholders::_1, std::placeholders::_2));
+  }
+
+  ~ROSflightUnity() = default;
+
+private:
+  // ros
+  ros::NodeHandle nh_;
+  ros::Subscriber sub_rc_;
+  ros::Publisher pub_truth_;
+
+  // ROSflight SIL objects
+  std::unique_ptr<rosflight_unity::UnityBridge> unity_;
+  std::unique_ptr<rosflight_unity::UnityBoard> board_;
+  std::unique_ptr<rosflight_firmware::Mavlink> mavlink_;
+  std::unique_ptr<rosflight_firmware::ROSflight> firmware_;
+
+  void FixedUpdate(int32_t secs, int32_t nsecs)
+  {
+    //
+    // ROS Communications
+    //
+
+    publishTruth();
+
+    //
+    // Software-in-the-loop
+    //
+
+    // Use Unity clock as the external clock
+    board_->setTime(secs, nsecs);
+
+    firmware_->run();
+  }
+
+  // --------------------------------------------------------------------------
+
+  void rc_callback(const rosflight_msgs::RCRawConstPtr& msg)
+  {
+    board_->setRC(msg->values.data());
+  }
+
+  // --------------------------------------------------------------------------
+
+  void publishTruth()
+  {
+    auto truth = unity_->getTruthData();
+    geometry_msgs::PoseStamped msg;
+    msg.header.stamp = ros::Time(truth.timestamp_secs, truth.timestamp_nsecs);
+    msg.header.frame_id = "world_ned";
+    msg.pose.position.x = truth.x[0];
+    msg.pose.position.y = truth.x[1];
+    msg.pose.position.z = truth.x[2];
+    msg.pose.orientation.x = truth.q[1];
+    msg.pose.orientation.y = truth.q[2];
+    msg.pose.orientation.z = truth.q[3];
+    msg.pose.orientation.w = truth.q[0];
+    pub_truth_.publish(msg);
+  }
+
+};
 
 // ----------------------------------------------------------------------------
-
-void FixedUpdate(int32_t secs, int32_t nsecs)
-{
-
-  //
-  // ROS Communications
-  //
-
-  geometry_msgs::PoseStamped msg;
-  msg.header.stamp = ros::Time::now();
-
-
-  //
-  // Software-in-the-loop
-  //
-
-  // Use Unity clock as the external clock
-  board->setTime(secs, nsecs);
-
-  firmware->run();
-}
-
-// ----------------------------------------------------------------------------
-
-void rc_callback(const rosflight_msgs::RCRawConstPtr& msg)
-{
-  board->setRC(msg->values.data());
-}
-
 // ----------------------------------------------------------------------------
 
 int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "rosflight_unity");
-
-  //
-  // ROS connections
-  //
-
   ros::NodeHandle nh("~");
-
-  ros::Subscriber sub_rc = nh.subscribe("rc_in", 1, rc_callback);
-  // pub_truth = nh.advertise<>("rc_in", 1, rc_callback);
-
-  //
-  // Unity bridge setup
-  //
-
-  rosflight_unity::UnityBridge unity;
-  unity.init();
-
-  unity.doConfigSim();
-  unity.doConfigVehicle();
-
-  //
-  // Initialize ROSflight autopilot
-  //
-
-  board.reset(new rosflight_unity::UnityBoard(unity));
-  mavlink.reset(new rosflight_firmware::Mavlink(*board));
-  firmware.reset(new rosflight_firmware::ROSflight(*board, *mavlink));
-
-  firmware->init();
-
-  // Register a listener to the Unity physics update event
-  unity.onPhysicsUpdate(std::bind(FixedUpdate,
-                          std::placeholders::_1, std::placeholders::_2));
-
+  ROSflightUnity sil(nh);
   ros::spin();
   return 0;
 }

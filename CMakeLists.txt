@@ -14,6 +14,7 @@ endif()
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
     roscpp
+    geometry_msgs
     rosflight_firmware
     rosflight_msgs
 )
