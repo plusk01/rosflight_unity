@@ -28,9 +28,9 @@ public:
 
     pub_truth_ = nh.advertise<geometry_msgs::PoseStamped>("truth", 1);
 
-    // TODO: Does this *really* really belong here?
-    pub_att_correction_ = nh.advertise<geometry_msgs::Quaternion>("/attitude_correction", 1);
+    pub_extatt_ = nh.advertise<geometry_msgs::Quaternion>("/external_attitude", 1);
     nh.getParam("use_external_attitude", use_external_attitude_);
+    if (use_external_attitude_) ROS_INFO("Using truth for external attitude update");
 
     //
     // Unity bridge setup
@@ -63,7 +63,7 @@ private:
   // ros
   ros::NodeHandle nh_;
   ros::Subscriber sub_rc_;
-  ros::Publisher pub_truth_, pub_att_correction_;
+  ros::Publisher pub_truth_, pub_extatt_;
 
   // ROSflight SIL objects
   std::unique_ptr<rosflight_unity::UnityBridge> unity_;
@@ -118,7 +118,7 @@ private:
     pub_truth_.publish(msg);
 
     // publish attitude correction
-    if (use_external_attitude_) pub_att_correction_.publish(msg.pose.orientation);
+    if (use_external_attitude_) pub_extatt_.publish(msg.pose.orientation);
   }
 
 };
