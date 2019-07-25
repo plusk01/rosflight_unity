@@ -83,6 +83,14 @@ namespace rosflight_unity
     float sonar_read() override { return 0.0f; }
     void sonar_update() override {}
 
+    bool gnss_present() override { return false; }
+    void gnss_update() override {}
+
+    // GNSS
+    rosflight_firmware::GNSSData gnss_read() override { return {}; };
+    bool gnss_has_new_data() override { return false; }
+    rosflight_firmware::GNSSRaw gnss_raw_read() override { return {}; }
+
     // PWM
     // TODO make these deal in normalized (-1 to 1 or 0 to 1) values (not pwm-specific)
     void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override {}
