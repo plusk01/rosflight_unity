@@ -91,16 +91,24 @@ namespace rosflight_unity
     bool gnss_has_new_data() override { return false; }
     rosflight_firmware::GNSSRaw gnss_raw_read() override { return {}; }
 
-    // PWM
-    // TODO make these deal in normalized (-1 to 1 or 0 to 1) values (not pwm-specific)
-    void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override {}
-    void pwm_write(uint8_t channel, float value) override;
-    void pwm_disable() override;
+    bool battery_voltage_present() const override { return false; }
+    float battery_voltage_read() const override { return 0.0f; }
+    void battery_voltage_set_multiplier(double multiplier) override {}
+
+    bool battery_current_present() const override { return false; }
+    float battery_current_read() const override { return 0.0f; }
+    void battery_current_set_multiplier(double multiplier) override {}
 
     // RC
     void rc_init(rc_type_t rc_type) override;
     float rc_read(uint8_t channel) override;
     bool rc_lost() override;
+
+    // PWM
+    // TODO make these deal in normalized (-1 to 1 or 0 to 1) values (not pwm-specific)
+    void pwm_init(uint32_t refresh_rate, uint16_t idle_pwm) override {}
+    void pwm_write(uint8_t channel, float value) override;
+    void pwm_disable() override;
 
     // non-volatile memory
     void memory_init() override {}
@@ -117,8 +125,10 @@ namespace rosflight_unity
     void led1_toggle() override {}
 
     // Backup memory
-    bool has_backup_data() override { return false; }
-    rosflight_firmware::BackupData get_backup_data() override { return {}; }
+    void backup_memory_init() override {}
+    bool backup_memory_read(void *dest, size_t len) override { return false; }
+    void backup_memory_write(const void *src, size_t len) override {}
+    void backup_memory_clear(size_t len) override {}
 
   private:
     std::string vehicleName_ = "unity"; ///< name of associated simulated vehicle
